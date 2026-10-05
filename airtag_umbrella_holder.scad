@@ -12,7 +12,7 @@ disc_d        = 29.5;  // A 円盤の外径
 recess_d      = 26.8;  // C 凹みの内径（リム内径）
 disc_edge_h   = 5.6;   // B 縁での厚み（側面の平らな帯の高さ）
 disc_center_h = 9.0;   // B 中央での厚み（底が膨らんでいる）
-dome_R        = 26;    // 底面のふくらみの球面半径（写真の輪郭から推定。縁の手前までこの球面、そこから縁までは平ら）
+dome_R        = 27;    // 底面のふくらみの球面半径（写真の輪郭からの推定は 26。試し刷り用に 1 大きく。縁の手前までこの球面、そこから縁までは平ら）
 shaft_d       = 7.7;   // E シャフト径（表示用）
 
 /* [AirTag] */
@@ -20,7 +20,7 @@ airtag_d = 31.9;
 airtag_h = 8.0;
 
 /* [クリアランス] */
-clr          = 0.2;   // 円盤まわりの片側すき間
+clr          = 0.3;   // 円盤まわりの片側すき間（試し刷り用に安全側。確認後は 0.2 に戻す）
 pocket_clr_d = 0.5;   // AirTag ポケットの直径方向すき間
 pocket_clr_h = 0.3;   // AirTag ポケットの高さ方向すき間
 thread_clr   = 0.35;  // ねじの半径方向すき間
@@ -143,8 +143,8 @@ module disc_cavity() {
 module body() {
     difference() {
         union() {
-            translate([0, 0, thread_top_z])
-                cylinder(d = upper_od, h = lip_h - thread_top_z);
+            translate([0, 0, thread_top_z - 0.01])   // ねじ部と 0.01 重ねて、段差面での面の重なりを避ける
+                cylinder(d = upper_od, h = lip_h - thread_top_z + 0.01);
             translate([0, 0, body_bot_z]) {
                 cylinder(d = minor_d, h = thread_len);
                 ext_thread();
