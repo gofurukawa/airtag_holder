@@ -1,2 +1,139 @@
-# airtag_holder
-for Amvel "pentagon"
+# AirTag Umbrella Holder for AMVEL pentagon LARGE
+
+AMVEL の超軽量折りたたみ傘 [pentagon LARGE](https://www.umbrella-store.net/products/pentagon-large)（[pentagon シリーズ](https://www.umbrella-store.net/collections/pentagon-series)）の持ち手の端に、AirTag を固定するための 3D プリント用ホルダーです。
+
+持ち手の端にある円盤を左右 2 つのパーツで挟み込み、その下に AirTag を収め、窓あきのキャップをねじ込んで全体を固定します。
+
+> [!NOTE]
+> AMVEL 社とは関係のない非公式の自作パーツです。寸法は手元の 1 本を実測した値で、ロットや他モデル（pentagon72 / pentagon67 など）では合わない可能性があります。
+
+## 構造
+
+使用時の向き（上が生地側）で、上から次の順に重なります。
+
+| 部品 | 役割 |
+| --- | --- |
+| 挟みパーツ A / B | 持ち手の円盤を左右から抱き込む。上端の爪でリム上端を押さえ、下部の外周におねじ |
+| AirTag | 円盤の下のポケットに収納 |
+| キャップ | めねじで本体にねじ込み、左右パーツを一体化。下向きの窓（Ø26）から AirTag が見え、音も抜ける |
+
+設計上のポイントは次のとおりです。
+
+- 円盤上面の凹みは、傘を畳むときに骨の連結部分が収まる場所なので、ふさがないようにしています。爪はリムの上端（幅約 1.35mm）だけを押さえ、凹みの開口 Ø26.8 はそのまま残ります。
+- 円盤の底面は中央に向けて膨らんでいるため、AirTag との仕切りを同じ曲面で凹ませ、ガタつきと高さを抑えています。
+- シャフト上の凹み（円盤上面から 13.5mm）や伸縮ロックのボタン（同 29.0mm）にはかかりません。
+- 窓が下を向くので、入り込んだ雨水は自然に抜けます。
+
+組み付け後の外形は、最大 Ø43.7mm、全高は約 22.5mm（円盤より下に約 11mm、上に 2mm）です。
+
+## ファイル
+
+| ファイル | 内容 |
+| --- | --- |
+| `airtag_umbrella_holder.scad` | OpenSCAD のソース。寸法はすべて変数 |
+| `half_a.stl` | 挟みパーツ A（印刷向きに配置済み） |
+| `half_b.stl` | 挟みパーツ B（印刷向きに配置済み） |
+| `cap.stl` | キャップ（印刷向きに配置済み） |
+
+## 実測値（モデルの基準寸法）
+
+| 記号 | 箇所 | 値 |
+| --- | --- | --- |
+| A | 円盤の外径 | 29.5 mm |
+| B | 円盤の厚み | 縁 5.6 mm / 中央 9.0 mm（底が膨らんでいる） |
+| C | 凹みの内径（リム内径） | 26.8 mm |
+| D | 凹みの深さ | 縁 4.6 mm〜（中央ほど深い） |
+| E | シャフト径 | 7.7 mm |
+| — | リムの厚み | 約 1.35 mm |
+
+## 部品の主な寸法
+
+| 項目 | 値 |
+| --- | --- |
+| 爪の内径 | Ø26.8 mm |
+| 円盤の空洞 | Ø29.9 mm（片側 0.2mm のすき間） |
+| AirTag ポケット | Ø32.4 × 深さ 8.3 mm |
+| ねじ | 台形ねじ Ø39 × ピッチ 3 mm、山の高さ 1.5 mm |
+| キャップの窓 | Ø26 mm |
+| 位置決めピン | Ø1.75 mm（フィラメント流用）× 2 本 |
+
+## Mac で使うソフトウェア
+
+### OpenSCAD（.scad を開いて寸法を調整する）
+
+```sh
+brew install --cask openscad@snapshot
+```
+
+正式版（2021.01）でも動きますが、ねじ山を含むこのモデルではレンダリング（F6）に数分かかります。開発版（snapshot）を入れ、Preferences → Advanced で Backend を **Manifold** にすると数秒で終わります。Apple Silicon にもネイティブ対応しています。
+
+Homebrew の cask 名が変わっている場合は、[openscad.org](https://openscad.org/downloads.html) の Development Snapshots から直接ダウンロードしてください。
+
+### スライサー（STL を確認して G-code にする）
+
+| ソフト | 向いているプリンタ |
+| --- | --- |
+| [UltiMaker Cura](https://ultimaker.com/software/ultimaker-cura/) | Creality（Ender-3 S1 Pro など）、Ultimaker、汎用機 |
+| [Bambu Studio](https://bambulab.com/download/studio) / [OrcaSlicer](https://github.com/SoftFever/OrcaSlicer) | Bambu Lab |
+| [PrusaSlicer](https://www.prusa3d.com/page/prusaslicer_424/) | Prusa |
+
+### インストール不要の確認方法
+
+Finder で STL を選んでスペースキーを押すと、クイックルックで 3D プレビューを回して確認できます。
+
+## STL の書き出し
+
+OpenSCAD の GUI でカスタマイザーの `part` を切り替えて F6 → F7 で書き出すか、コマンドラインで次のように実行します。
+
+```sh
+# macOS（Homebrew cask）の場合、openscad コマンドはアプリ内にある
+OPENSCAD=/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD
+
+for p in half_a half_b cap; do
+  "$OPENSCAD" -D "part=\"$p\"" -o "$p.stl" airtag_umbrella_holder.scad
+done
+```
+
+アプリ名が `OpenSCAD-Nightly.app` などになっている場合は、パスを読み替えてください。
+
+| `part` の値 | 出力 |
+| --- | --- |
+| `assembly` | 傘と AirTag のダミー入りの組み付け確認用 |
+| `half_a` / `half_b` | 挟みパーツ（印刷向き） |
+| `cap` | キャップ（印刷向き） |
+| `print_all` | 3 部品を並べた状態 |
+
+## 印刷設定（Creality Ender-3 S1 Pro + Cura の例）
+
+| 設定 | 値 | 理由 |
+| --- | --- | --- |
+| ノズル | 0.4 mm | 標準 |
+| 積層ピッチ | 0.16 mm | ねじ山をなめらかにする |
+| 壁の線数 | 4 | ねじ部（肉厚約 1.8mm）をほぼソリッドにする |
+| インフィル | 50% 以上 | 部品が小さいので時間はほぼ増えない |
+| サポート | 有効・配置「ビルドプレート上」・構造「ツリー」 | ポケットの天井だけを支える |
+| 向き | STL のまま | 本体はポケット開口が下、キャップは底面が下 |
+
+- 本体はねじの軸を縦にして印刷することで、ねじ山が積層方向に沿ってきれいに出ます。サポートが必要なのはポケットの天井だけで、開口側から外せます。
+- キャップはサポートなしで印刷できます。
+- 素材は、試し刷りなら PLA で十分です。常用するなら、熱や紫外線に強い PETG か ASA がおすすめです。
+
+## 組み立て
+
+1. 1.75mm フィラメントをニッパーで約 6mm に 2 本切り、バリを落とします。
+2. 挟みパーツの片方の合わせ面にあるピン穴に、ピンを差し込みます。
+3. 左右のパーツで持ち手の円盤を挟みます。
+4. 下側のポケットに AirTag を入れます。
+5. キャップをねじ込みます。キャップは本体の下端に突き当たって止まり、AirTag を押しつぶしません。
+
+## 調整
+
+試し刷りの結果に応じて、`.scad` の次の変数を変えてください。
+
+| 症状 | 変数 | 目安 |
+| --- | --- | --- |
+| キャップがきつい／緩い | `thread_clr`（初期値 0.35） | きつければ 0.45、緩ければ 0.25 |
+| 円盤にはめるとガタつく／閉じない | `clr`（初期値 0.2）、`recess_d`（爪の内径） | 0.1 刻みで調整 |
+| ピンがきつい／抜ける | `pin_clr`（初期値 0.08） | きつければ 0.12、緩ければ 0.05 |
+| AirTag がカタカタ鳴る | — | 厚さ 0.5mm 程度のシリコンシートを挟む |
+| キャップが緩みやすい | `washer_gap`（初期値 1.0） | ねじ上端の段差に平ワッシャー状のシリコンパッキンを入れる |
