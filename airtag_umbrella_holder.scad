@@ -10,8 +10,9 @@ part = "assembly"; // [assembly, half_a, half_b, cap, print_all]
 /* [傘の実測値] */
 disc_d        = 29.5;  // A 円盤の外径
 recess_d      = 26.8;  // C 凹みの内径（リム内径）
-disc_edge_h   = 5.6;   // B 縁での厚み
+disc_edge_h   = 5.6;   // B 縁での厚み（側面の平らな帯の高さ）
 disc_center_h = 9.0;   // B 中央での厚み（底が膨らんでいる）
+dome_R        = 26;    // 底面のふくらみの球面半径（写真の輪郭から推定。縁の手前までこの球面、そこから縁までは平ら）
 shaft_d       = 7.7;   // E シャフト径（表示用）
 
 /* [AirTag] */
@@ -54,10 +55,8 @@ $fn = 96;
 
 // ---------- 派生寸法 ----------
 cavity_r       = disc_d / 2 + clr;
-sag            = disc_center_h - disc_edge_h;
-dome_R         = (pow(disc_d / 2, 2) + sag * sag) / (2 * sag);
-cavity_bot_z   = -(disc_center_h + clr);
-dome_cz        = cavity_bot_z + dome_R;
+cavity_bot_z   = -(disc_center_h + clr);   // 空洞の底（球面の頂点）
+ledge_z        = -(disc_edge_h + clr);     // 球面が縁の平らな部分に移る高さ
 pocket_d       = airtag_d + pocket_clr_d;
 pocket_h       = airtag_h + pocket_clr_h;
 pocket_top_z   = cavity_bot_z - partition_t;
@@ -70,8 +69,22 @@ cap_od         = thread_major_d + 2 * thread_clr + 2 * cap_wall;
 cap_inner_h    = thread_len - washer_gap;
 cap_h          = cap_floor + cap_inner_h;
 
-function cavity_z_at(r) = dome_cz - sqrt(dome_R * dome_R - r * r);
+// 頂点 apex_z・半径 R の球面の、半径 r での高さ
+function dome_z(r, apex_z, R) = apex_z + R - sqrt(R * R - r * r);
+// 半径 r での空洞の底面（球面と縁の平らな部分の低い方）
+function cavity_z_at(r) = min(dome_z(r, cavity_bot_z, dome_R), ledge_z);
 pin_z = (pocket_top_z + cavity_z_at(pin_x)) / 2;
+
+// ---------- 円盤の形（回転断面） ----------
+// 底面は頂点 apex_z・半径 R の球面。球面が edge_z に達した先は edge_z の平面で、
+// 半径 r_max の側面を経て top_z まで。空洞と確認用ダミーの両方で使う
+module disc_profile(apex_z, R, edge_z, r_max, top_z, n = 48) {
+    sag  = edge_z - apex_z;
+    r_sh = sag < R ? min(r_max, sqrt(R * R - (R - sag) * (R - sag))) : r_max;  // 球面と平面の境目
+    polygon(concat(
+        [for (i = [0 : n]) let (r = r_sh * i / n) [r, dome_z(r, apex_z, R)]],
+        [[r_max, edge_z], [r_max, top_z], [0, top_z]]));
+}
 
 // ---------- らせんのねじ山 ----------
 // z=0..length の範囲に、半径 r_in→r_out の台形断面の山を生成
@@ -124,11 +137,7 @@ module int_thread_void(h) {
 
 // ---------- 本体（分割前） ----------
 module disc_cavity() {
-    intersection() {
-        translate([0, 0, cavity_bot_z - 0.1])
-            cylinder(r = cavity_r, h = clr - cavity_bot_z + 0.1);
-        translate([0, 0, dome_cz]) sphere(r = dome_R, $fn = 192);
-    }
+    rotate_extrude() disc_profile(cavity_bot_z, dome_R, ledge_z, cavity_r, clr);
 }
 
 module body() {
@@ -171,11 +180,7 @@ module cap() {
 module umbrella_dummy() {
     color("DimGray") {
         difference() {
-            intersection() {
-                translate([0, 0, -disc_center_h]) cylinder(d = disc_d, h = disc_center_h);
-                translate([0, 0, -disc_center_h + dome_R - 0.001])
-                    sphere(r = dome_R, $fn = 192);
-            }
+            rotate_extrude() disc_profile(-disc_center_h, dome_R, -disc_edge_h, disc_d / 2, 0);
             translate([0, 0, -4.6]) cylinder(d = recess_d, h = 5);
         }
         translate([0, 0, -5]) cylinder(d = shaft_d, h = 45);
