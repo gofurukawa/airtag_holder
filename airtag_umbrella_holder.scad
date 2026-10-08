@@ -50,6 +50,11 @@ pin_clr   = 0.08;
 pin_depth = 3;
 pin_x     = 12;
 
+/* [印刷向き] */
+// 挟みパーツは合わせ面を下にして印刷する。空洞の内面は横倒しのアーチになるので、
+// 頂上（合わせ面から最も遠い所）を 45°の屋根と平らな橋に置き換え、たれが空洞に食い込まないようにする
+bridge_relief = 0.6;  // 橋の高さ（元の円からの逃げ）。0 で真円のまま（頂上はサポートが要る）
+
 /* [解像度] */
 $fn = 96;
 
@@ -137,6 +142,19 @@ module int_thread_void(h) {
     }
 }
 
+// ---------- 横倒し印刷用の逃げ ----------
+// 半径 r の円に、±Y（合わせ面から最も遠い向き）へ 45°の屋根を足し、r + bridge_relief で平らに切る
+module relief_2d(r) {
+    k = r * sqrt(2);  // 屋根の頂点
+    intersection() {
+        hull() {
+            circle(r = r);
+            square([0.01, 2 * k], center = true);
+        }
+        square([2 * k, 2 * (r + bridge_relief)], center = true);
+    }
+}
+
 // ---------- 本体（分割前） ----------
 module disc_cavity() {
     rotate_extrude() disc_profile(cavity_bot_z, dome_R_eff, ledge_z, cavity_r, clr);
@@ -155,6 +173,11 @@ module body() {
         translate([0, 0, -1]) cylinder(d = recess_d, h = lip_h + 2);   // 爪の開口
         disc_cavity();                                                  // 円盤
         translate([0, 0, body_bot_z - 1]) cylinder(d = pocket_d, h = pocket_h + 1); // AirTag
+        if (bridge_relief > 0) {                                        // 横倒し印刷用の逃げ
+            translate([0, 0, body_bot_z - 1]) linear_extrude(pocket_h + 1) relief_2d(pocket_d / 2);
+            translate([0, 0, ledge_z]) linear_extrude(clr - ledge_z) relief_2d(cavity_r);
+            translate([0, 0, -1]) linear_extrude(lip_h + 2) relief_2d(recess_d / 2);
+        }
         for (x = [-pin_x, pin_x])                                       // ピン穴
             translate([x, 0, pin_z]) rotate([90, 0, 0])
                 cylinder(d = pin_d + 2 * pin_clr, h = 2 * pin_depth, center = true, $fn = 24);
@@ -194,8 +217,11 @@ module airtag_dummy() {
 }
 
 // ---------- 出力 ----------
-// 印刷向き：本体はポケット開口を下（=モデルの向きのまま）、キャップは底を下
-module print_half(side) translate([0, 0, -body_bot_z]) half(side);
+// 印刷向き：挟みパーツは合わせ面を下（ねじ山が上）、キャップは底を下
+body_h = lip_h - body_bot_z;
+module print_half(side)
+    rotate([side * 90, 0, 0])                                 // 合わせ面（y=0）を z=0 に
+        translate([0, 0, -(body_bot_z + lip_h) / 2]) half(side);  // ねじの軸方向の中央を原点に
 
 if (part == "assembly") {
     umbrella_dummy();
@@ -210,7 +236,7 @@ if (part == "assembly") {
 } else if (part == "cap") {
     cap();
 } else if (part == "print_all") {
-    translate([0, 3, 0]) print_half(1);
-    translate([0, -3, 0]) print_half(-1);
+    translate([0, body_h / 2 + 3, 0]) print_half(1);
+    translate([0, -body_h / 2 - 3, 0]) print_half(-1);
     translate([cap_od + 8, 0, 0]) cap();
 }
