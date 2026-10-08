@@ -12,7 +12,7 @@ disc_d        = 29.5;  // A 円盤の外径
 recess_d      = 26.8;  // C 凹みの内径（リム内径）
 disc_edge_h   = 5.6;   // B 縁での厚み（側面の平らな帯の高さ）
 disc_center_h = 9.0;   // B 中央での厚み（底が膨らんでいる）
-dome_R        = 27;    // 底面のふくらみの球面半径（写真の輪郭からの推定は 26。試し刷り用に 1 大きく。縁の手前までこの球面、そこから縁までは平ら）
+dome_R        = 0;     // 空洞の底の球面半径。0 なら縁と中央の厚みの差から自動（33.7、平らな肩なし＝実績のある形）。実物は約 28 で縁に幅約 1.5 の平らな肩があるが、再現すると印刷誤差で当たりやすい
 shaft_d       = 7.7;   // E シャフト径（表示用）
 
 /* [AirTag] */
@@ -20,7 +20,7 @@ airtag_d = 31.9;
 airtag_h = 8.0;
 
 /* [クリアランス] */
-clr          = 0.3;   // 円盤まわりの片側すき間（試し刷り用に安全側。確認後は 0.2 に戻す）
+clr          = 0.2;   // 円盤まわりの片側すき間（0.2 で縁も中央もぴったり固定できた実績あり）
 pocket_clr_d = 0.5;   // AirTag ポケットの直径方向すき間
 pocket_clr_h = 0.3;   // AirTag ポケットの高さ方向すき間
 thread_clr   = 0.35;  // ねじの半径方向すき間
@@ -55,8 +55,10 @@ $fn = 96;
 
 // ---------- 派生寸法 ----------
 cavity_r       = disc_d / 2 + clr;
+sag            = disc_center_h - disc_edge_h;
+dome_R_eff     = dome_R > 0 ? dome_R : (pow(disc_d / 2, 2) + sag * sag) / (2 * sag);  // 自動なら縁の角を通る球面
 cavity_bot_z   = -(disc_center_h + clr);   // 空洞の底（球面の頂点）
-ledge_z        = -(disc_edge_h + clr);     // 球面が縁の平らな部分に移る高さ
+ledge_z        = -(disc_edge_h + clr);     // 球面が縁の平らな部分に移る高さ（自動の球面では縁の角に一致）
 pocket_d       = airtag_d + pocket_clr_d;
 pocket_h       = airtag_h + pocket_clr_h;
 pocket_top_z   = cavity_bot_z - partition_t;
@@ -72,7 +74,7 @@ cap_h          = cap_floor + cap_inner_h;
 // 頂点 apex_z・半径 R の球面の、半径 r での高さ
 function dome_z(r, apex_z, R) = apex_z + R - sqrt(R * R - r * r);
 // 半径 r での空洞の底面（球面と縁の平らな部分の低い方）
-function cavity_z_at(r) = min(dome_z(r, cavity_bot_z, dome_R), ledge_z);
+function cavity_z_at(r) = min(dome_z(r, cavity_bot_z, dome_R_eff), ledge_z);
 pin_z = (pocket_top_z + cavity_z_at(pin_x)) / 2;
 
 // ---------- 円盤の形（回転断面） ----------
@@ -137,7 +139,7 @@ module int_thread_void(h) {
 
 // ---------- 本体（分割前） ----------
 module disc_cavity() {
-    rotate_extrude() disc_profile(cavity_bot_z, dome_R, ledge_z, cavity_r, clr);
+    rotate_extrude() disc_profile(cavity_bot_z, dome_R_eff, ledge_z, cavity_r, clr);
 }
 
 module body() {
@@ -180,7 +182,7 @@ module cap() {
 module umbrella_dummy() {
     color("DimGray") {
         difference() {
-            rotate_extrude() disc_profile(-disc_center_h, dome_R, -disc_edge_h, disc_d / 2, 0);
+            rotate_extrude() disc_profile(-disc_center_h, dome_R_eff, -disc_edge_h, disc_d / 2, 0);
             translate([0, 0, -4.6]) cylinder(d = recess_d, h = 5);
         }
         translate([0, 0, -5]) cylinder(d = shaft_d, h = 45);
