@@ -5,7 +5,7 @@
 // =============================================================
 
 /* [出力する部品] */
-part = "assembly"; // [assembly, half_a, half_b, cap, handle_cap, handle, handle_upright, print_all]
+part = "assembly"; // [assembly, half_a, half_b, cap, handle_cap, handle, handle_upright, anchor, grip, print_all]
 use_handle = true;  // assembly と print_all で、取っ手付きのキャップと取っ手を使う
 
 /* [傘の実測値] */
@@ -57,6 +57,13 @@ bar_w      = 10;    // 横棒の幅
 bar_h      = 3;     // 横棒の厚さ＝溝の深さ（キャップの底はこの分だけ厚くなる）
 slot_clr   = 0.2;   // 溝の片側すき間
 
+/* [差し込み式の取っ手（anchor ＋ grip）] */
+// アンカー（横棒＋八角の突起）を窓に通し、キャップの外で握りを突起に差し込んで、Ø1.75 のピンで留める
+peg_len      = 30;    // 横棒の下面から突起の先端まで
+socket_clr   = 0.2;   // 握りの穴の片側すき間
+grip_gap     = 5;     // キャップの下面から握りの上端まで（音の抜け道）
+grip_top_d   = 15.5;  // 握りの上端の直径（ここから grip_d までなだらかに太くなる）
+
 /* [位置決めピン（1.75mm フィラメントを流用）] */
 pin_d     = 1.75;
 pin_clr   = 0.08;
@@ -97,7 +104,14 @@ grip_len       = grip_top_z - tip_c_z;        // 握りの円柱部分の長さ
 // 2 つ割りの取っ手を合わせる位置決めピン（握りの円柱部分に 2 本、軸の左右に振り分け）
 handle_pins    = [[grip_d / 4, grip_top_z - grip_len / 4], [-grip_d / 4, grip_top_z - 3 * grip_len / 4]];
 
+peg_r          = bar_w / 2 / cos(22.5);       // 八角の突起の外接半径（対辺 = bar_w）
+peg_tip_z      = -bar_h - peg_len;            // 突起の先端
+grip_top_z2    = -handle_floor - grip_gap;    // 差し込み式の握りの上端
+peg_pin_z      = (grip_top_z2 + peg_tip_z) / 2;  // 突起と握りを留めるピンの高さ
+socket_r       = (bar_w / 2 + socket_clr) / cos(22.5);
+
 assert(grip_d <= window_d - 1.5, "grip_d が太すぎて窓を通らない");
+assert(grip_top_d >= 2 * socket_r + 3, "grip_top_d が細すぎて、握りの穴のまわりの壁が薄い");
 assert(neck_d <= bar_w, "neck_d は bar_w 以下にする（一体で逆さに刷るとき首が横棒からはみ出す）");
 assert(grip_len >= 0, "handle_len が短すぎる（flare_len を短くする）");
 
@@ -266,6 +280,43 @@ module handle_half(side) {
     }
 }
 
+// ---------- 差し込み式の取っ手 ----------
+// 対辺 a の八角形。辺が x・y 軸に平行（寝かせて刷ると平らな面が下、斜めの面は 45°）
+module octagon(a) rotate(22.5) circle(r = a / 2 / cos(22.5), $fn = 8);
+
+// アンカー：横棒＋八角の突起。使用時の向きで z=0 が横棒の上面
+module anchor() {
+    difference() {
+        union() {
+            translate([0, 0, -bar_h]) linear_extrude(bar_h) bar_2d();
+            translate([0, 0, peg_tip_z + 1]) linear_extrude(peg_len - 1 + 0.01) octagon(bar_w);
+            translate([0, 0, peg_tip_z]) linear_extrude(1, scale = bar_w / (bar_w - 2)) octagon(bar_w - 2);  // 先端の面取り
+        }
+        translate([0, 0, peg_pin_z]) rotate([90, 0, 0])
+            cylinder(d = pin_d + 2 * pin_clr, h = bar_w + 2, center = true, $fn = 24);
+    }
+}
+
+// 握り：上端 Ø grip_top_d からなだらかに grip_d まで太くなり、先端は半球。中央に八角の穴
+function grip_profile(n = 32) = let (top = grip_top_z2) concat(
+    [[0, top]],
+    [for (i = [0 : n]) let (t = i / n)
+        [grip_top_d / 2 + (grip_d - grip_top_d) / 2 * (1 - cos(180 * t)) / 2, top - flare_len * t]],
+    [for (i = [0 : n]) let (a = 90 * i / n) [grip_d / 2 * cos(a), tip_c_z - grip_d / 2 * sin(a)]]);
+
+module grip() {
+    depth = grip_top_z2 - peg_tip_z + 0.5;   // 穴の深さ（突起の先端の下に 0.5 の逃げ）
+    difference() {
+        rotate_extrude() polygon(grip_profile());
+        translate([0, 0, grip_top_z2 - depth]) linear_extrude(depth + 0.01) octagon(bar_w + 2 * socket_clr);
+        // 穴の奥は 45°の屋根（逆さに刷るとき天井がサポートなしで閉じる）
+        translate([0, 0, grip_top_z2 - depth - socket_r]) cylinder(r1 = 0, r2 = socket_r, h = socket_r + 0.01, $fn = 8);
+        translate([0, 0, grip_top_z2 - 0.6]) cylinder(r1 = socket_r - 0.2, r2 = socket_r + 0.6, h = 0.61, $fn = 32);  // 入口の面取り
+        translate([0, 0, peg_pin_z]) rotate([90, 0, 0])
+            cylinder(d = pin_d + 2 * pin_clr, h = grip_d + 2, center = true, $fn = 24);
+    }
+}
+
 // ---------- 確認用のダミー ----------
 module umbrella_dummy() {
     color("DimGray") {
@@ -296,6 +347,8 @@ module print_handle() {                                         // 2 つ割り�
     translate([bar_l / 2 + 3, 0, 0]) print_handle_half(-1);
 }
 module print_handle_upright() rotate([180, 0, 0]) handle();    // 一体版。横棒の上面を z=0 に
+module print_anchor() translate([0, 0, bar_w / 2]) rotate([90, 0, 0]) anchor();   // 寝かせる（T の面を下）
+module print_grip() rotate([180, 0, 0]) translate([0, 0, -grip_top_z2]) grip();   // 穴の口を下に立てる
 
 echo(str("取っ手：キャップの下に ", handle_len, " mm（なだらかに太くなる部分 ", flare_len, " mm、握りの円柱部分 ", grip_len,
          " mm）、取っ手付きキャップの高さ ", handle_floor + cap_inner_h, " mm"));
@@ -323,6 +376,10 @@ if (part == "assembly") {
     print_handle();
 } else if (part == "handle_upright") {
     print_handle_upright();
+} else if (part == "anchor") {
+    print_anchor();
+} else if (part == "grip") {
+    print_grip();
 } else if (part == "print_all") {
     translate([0, body_h / 2 + 3, 0]) print_half(1);
     translate([0, -body_h / 2 - 3, 0]) print_half(-1);
