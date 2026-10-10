@@ -5,7 +5,8 @@
 // =============================================================
 
 /* [出力する部品] */
-part = "assembly"; // [assembly, half_a, half_b, cap, print_all]
+part = "assembly"; // [assembly, half_a, half_b, cap, handle_cap, handle, print_all]
+use_handle = true;  // assembly と print_all で、取っ手付きのキャップと取っ手を使う
 
 /* [傘の実測値] */
 disc_d        = 29.5;  // A 円盤の外径
@@ -44,6 +45,19 @@ cap_floor  = 2.0;
 window_d   = 26;
 washer_gap = 1.0;  // キャップ上端と段差の間（パッキン用）
 
+/* [取っ手（T 字アンカー）] */
+// 横棒をキャップの底の溝に落とし込み、握りを窓から外へ出す。キャップを締めると本体の下端が横棒を押さえる。
+// 取っ手は窓の内側から通すので、握りは窓（window_d）より細くする
+handle_len = 70;    // キャップの下面から先端まで
+grip_d     = 22;    // 握りの直径（窓 Ø26 を通るよう 24 以下）
+neck_d     = 10;    // 窓を通る首の直径（bar_w 以下）。細いほど窓が開き、AirTag の音が抜ける
+neck_gap   = 10;    // キャップの下面から首が太くなり始めるまで（音の抜け道）
+taper_len  = 6;     // 首から握りへ太くなる部分の長さ（斜面が 45°以内なら逆さに立ててサポートなしで刷れる）
+bar_l      = 35;    // 横棒の長さ（両端はキャップのねじ穴に入るよう円弧に丸める）
+bar_w      = 10;    // 横棒の幅
+bar_h      = 3;     // 横棒の厚さ＝溝の深さ（キャップの底はこの分だけ厚くなる）
+slot_clr   = 0.2;   // 溝の片側すき間
+
 /* [位置決めピン（1.75mm フィラメントを流用）] */
 pin_d     = 1.75;
 pin_clr   = 0.08;
@@ -75,6 +89,15 @@ minor_d        = thread_major_d - 2 * thread_depth;
 cap_od         = thread_major_d + 2 * thread_clr + 2 * cap_wall;
 cap_inner_h    = thread_len - washer_gap;
 cap_h          = cap_floor + cap_inner_h;
+handle_floor   = cap_floor + bar_h;          // 取っ手付きキャップの底（溝の下に cap_floor が残る）
+bar_round_d    = minor_d + 2 * thread_clr - 0.5;  // 横棒の両端の円弧（めねじの山頂より 0.25 内側）
+rod_top_z      = -handle_floor - neck_gap - taper_len;   // 取っ手の座標（z=0 が横棒の上面）
+tip_z          = -handle_floor - handle_len;
+rod_len        = rod_top_z - (tip_z + grip_d / 2);       // 握りの円柱部分の長さ
+
+assert(grip_d <= window_d - 1.5, "grip_d が太すぎて窓を通らない");
+assert(neck_d <= bar_w, "neck_d は bar_w 以下にする（逆さに刷るとき首が横棒からはみ出す）");
+assert(rod_len > 0, "handle_len が短すぎる");
 
 // 頂点 apex_z・半径 R の球面の、半径 r での高さ
 function dome_z(r, apex_z, R) = apex_z + R - sqrt(R * R - r * r);
@@ -191,13 +214,37 @@ module half(side) {
     }
 }
 
-module cap() {
+// floor：底の厚さ。slot = true で、底の上面に取っ手の横棒の溝を彫る
+module cap(floor = cap_floor, slot = false) {
     difference() {
-        cylinder(d = cap_od, h = cap_h);
-        translate([0, 0, -1]) cylinder(d = window_d, h = cap_floor + 2);
-        translate([0, 0, cap_floor]) int_thread_void(cap_inner_h + 0.01);
+        cylinder(d = cap_od, h = floor + cap_inner_h);
+        translate([0, 0, -1]) cylinder(d = window_d, h = floor + 2);
+        translate([0, 0, floor]) int_thread_void(cap_inner_h + 0.01);
         // 窓の外側の面取り
         translate([0, 0, -0.01]) cylinder(d1 = window_d + 1.2, d2 = window_d, h = 0.6);
+        if (slot) translate([0, 0, floor - bar_h]) linear_extrude(bar_h + 0.01) bar_2d(slot_clr);
+    }
+}
+
+// ---------- 取っ手（T 字アンカー） ----------
+// 横棒の平面形。両端をキャップのねじ穴に入る円弧に丸める。c は外側へのすき間
+module bar_2d(c = 0) {
+    intersection() {
+        square([bar_l + 2 * c, bar_w + 2 * c], center = true);
+        circle(d = bar_round_d + 2 * c);
+    }
+}
+
+// 使用時の向き。z=0 が横棒の上面（＝取っ手付きキャップの底の上面）
+module handle() {
+    neck_bot_z = -handle_floor - neck_gap;
+    rod_bot_z  = tip_z + grip_d / 2;
+    union() {
+        translate([0, 0, -bar_h]) linear_extrude(bar_h) bar_2d();                          // 横棒
+        translate([0, 0, neck_bot_z]) cylinder(d = neck_d, h = -neck_bot_z - bar_h + 0.01);  // 首
+        translate([0, 0, rod_top_z]) cylinder(d1 = grip_d, d2 = neck_d, h = taper_len + 0.01); // 首から握りへ
+        translate([0, 0, rod_bot_z]) cylinder(d = grip_d, h = rod_len + 0.01);              // 握り
+        translate([0, 0, rod_bot_z]) sphere(d = grip_d);                                    // 先端の半球
     }
 }
 
@@ -217,26 +264,43 @@ module airtag_dummy() {
 }
 
 // ---------- 出力 ----------
-// 印刷向き：挟みパーツは合わせ面を下（ねじ山が上）、キャップは底を下
+// 印刷向き：挟みパーツは合わせ面を下（ねじ山が上）、キャップは底を下、取っ手は横棒を下にした逆さ
 body_h = lip_h - body_bot_z;
 module print_half(side)
     rotate([side * 90, 0, 0])                                 // 合わせ面（y=0）を z=0 に
         translate([0, 0, -(body_bot_z + lip_h) / 2]) half(side);  // ねじの軸方向の中央を原点に
+module print_handle() rotate([180, 0, 0]) handle();            // 横棒の上面を z=0 に
+
+echo(str("取っ手：キャップの下に ", handle_len, " mm、握りの円柱部分 ", rod_len, " mm、取っ手付きキャップの高さ ", handle_floor + cap_inner_h, " mm"));
 
 if (part == "assembly") {
     umbrella_dummy();
     airtag_dummy();
     color("MediumPurple", 0.85) translate([0, 4, 0]) half(1);
     color("SlateBlue", 0.85) translate([0, -4, 0]) half(-1);
-    color("MediumSeaGreen") translate([0, 0, body_bot_z - cap_floor - 12]) cap();
+    if (use_handle) {
+        color("MediumSeaGreen") translate([0, 0, body_bot_z - handle_floor - 12]) cap(handle_floor, true);
+        color("Peru") translate([0, 0, body_bot_z - 12]) handle();
+    } else {
+        color("MediumSeaGreen") translate([0, 0, body_bot_z - cap_floor - 12]) cap();
+    }
 } else if (part == "half_a") {
     print_half(1);
 } else if (part == "half_b") {
     print_half(-1);
 } else if (part == "cap") {
     cap();
+} else if (part == "handle_cap") {
+    cap(handle_floor, true);
+} else if (part == "handle") {
+    print_handle();
 } else if (part == "print_all") {
     translate([0, body_h / 2 + 3, 0]) print_half(1);
     translate([0, -body_h / 2 - 3, 0]) print_half(-1);
-    translate([cap_od + 8, 0, 0]) cap();
+    if (use_handle) {
+        translate([cap_od + 8, 0, 0]) cap(handle_floor, true);
+        translate([1.5 * cap_od + 16 + bar_l / 2, 0, 0]) print_handle();
+    } else {
+        translate([cap_od + 8, 0, 0]) cap();
+    }
 }
