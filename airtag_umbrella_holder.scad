@@ -5,8 +5,8 @@
 // =============================================================
 
 /* [出力する部品] */
-part = "assembly"; // [assembly, half_a, half_b, cap, handle_cap, handle, handle_upright, anchor, grip, print_all]
-use_handle = true;  // assembly と print_all で、取っ手付きのキャップと取っ手を使う
+part = "assembly"; // [assembly, half_a, half_b, cap, handle_cap, anchor, grip, print_all]
+use_handle = true;  // assembly と print_all で、取っ手付きのキャップと取っ手（アンカー＋握り）を使う
 
 /* [傘の実測値] */
 disc_d        = 29.5;  // A 円盤の外径
@@ -45,24 +45,21 @@ cap_floor  = 2.0;
 window_d   = 26;
 washer_gap = 1.0;  // キャップ上端と段差の間（パッキン用）
 
-/* [取っ手（T 字アンカー）] */
-// 横棒をキャップの底の溝に落とし込み、握りを窓から外へ出す。キャップを締めると本体の下端が横棒を押さえる。
-// 取っ手は窓の内側から通すので、握りは窓（window_d）より細くする
-handle_len = 70;    // キャップの下面から先端まで
-grip_d     = 22;    // 握りの直径（窓 Ø26 を通るよう 24 以下）
-neck_d     = 10;    // 窓を通る首の直径（bar_w 以下）。細いほど窓が開き、AirTag の音が抜ける
-flare_len  = 22;    // キャップの下面から、首が握りの太さまでなだらかに太くなる長さ（長いほど緩やか）
+/* [取っ手（アンカー＋握り）] */
+// アンカー（横棒＋八角の突起）を取っ手付きキャップの内側から窓に通し、横棒を底の溝に落とし込む。
+// キャップの外で握りを突起に差し込んで接着する。キャップを締めると本体の下端が横棒を押さえる。
+// 窓を通るのはアンカーだけなので、握りの太さや形は窓に縛られない
+grip_len   = 40;    // 握りの全長（上端から先端まで）
+grip_d     = 22;    // 握りの直径
+grip_top_d = 15.5;  // 握りの上端の直径（ここから grip_d までなだらかに太くなる）
+flare_len  = 14;    // 握りの上端から grip_d の太さになるまでの長さ（長いほど緩やか）
+grip_gap   = 5;     // キャップの下面から握りの上端まで（音の抜け道）
+peg_len    = 30;    // 横棒の下面から突起の先端まで
+socket_clr = 0.2;   // 握りの穴の片側すき間（接着剤が入るすき間）
 bar_l      = 35;    // 横棒の長さ（両端はキャップのねじ穴に入るよう円弧に丸める）
-bar_w      = 10;    // 横棒の幅
+bar_w      = 10;    // 横棒の幅＝八角の突起の対辺（アンカーを寝かせて刷るときの高さ）
 bar_h      = 3;     // 横棒の厚さ＝溝の深さ（キャップの底はこの分だけ厚くなる）
 slot_clr   = 0.2;   // 溝の片側すき間
-
-/* [差し込み式の取っ手（anchor ＋ grip）] */
-// アンカー（横棒＋八角の突起）を窓に通し、キャップの外で握りを突起に差し込んで、Ø1.75 のピンで留める
-peg_len      = 30;    // 横棒の下面から突起の先端まで
-socket_clr   = 0.2;   // 握りの穴の片側すき間
-grip_gap     = 5;     // キャップの下面から握りの上端まで（音の抜け道）
-grip_top_d   = 15.5;  // 握りの上端の直径（ここから grip_d までなだらかに太くなる）
 
 /* [位置決めピン（1.75mm フィラメントを流用）] */
 pin_d     = 1.75;
@@ -97,23 +94,16 @@ cap_inner_h    = thread_len - washer_gap;
 cap_h          = cap_floor + cap_inner_h;
 handle_floor   = cap_floor + bar_h;          // 取っ手付きキャップの底（溝の下に cap_floor が残る）
 bar_round_d    = minor_d + 2 * thread_clr - 0.5;  // 横棒の両端の円弧（めねじの山頂より 0.25 内側）
-grip_top_z     = -handle_floor - flare_len;   // 取っ手の座標（z=0 が横棒の上面）。握りの太さになる高さ
-tip_z          = -handle_floor - handle_len;  // 先端
+peg_tip_z      = -bar_h - peg_len;            // 取っ手の座標（z=0 が横棒の上面）。突起の先端
+grip_top_z     = -handle_floor - grip_gap;    // 握りの上端
+tip_z          = grip_top_z - grip_len;       // 握りの先端
 tip_c_z        = tip_z + grip_d / 2;          // 先端の半球の中心
-grip_len       = grip_top_z - tip_c_z;        // 握りの円柱部分の長さ
-// 2 つ割りの取っ手を合わせる位置決めピン（握りの円柱部分に 2 本、軸の左右に振り分け）
-handle_pins    = [[grip_d / 4, grip_top_z - grip_len / 4], [-grip_d / 4, grip_top_z - 3 * grip_len / 4]];
+socket_r       = (bar_w / 2 + socket_clr) / cos(22.5);   // 握りの穴（八角）の外接半径
+socket_depth   = grip_top_z - peg_tip_z + 0.5;           // 握りの穴の深さ（突起の先端の下に 0.5 の逃げ）
 
-peg_r          = bar_w / 2 / cos(22.5);       // 八角の突起の外接半径（対辺 = bar_w）
-peg_tip_z      = -bar_h - peg_len;            // 突起の先端
-grip_top_z2    = -handle_floor - grip_gap;    // 差し込み式の握りの上端
-peg_pin_z      = (grip_top_z2 + peg_tip_z) / 2;  // 突起と握りを留めるピンの高さ
-socket_r       = (bar_w / 2 + socket_clr) / cos(22.5);
-
-assert(grip_d <= window_d - 1.5, "grip_d が太すぎて窓を通らない");
+assert(grip_len >= flare_len + grip_d / 2, "grip_len が短すぎる（flare_len を短くする）");
 assert(grip_top_d >= 2 * socket_r + 3, "grip_top_d が細すぎて、握りの穴のまわりの壁が薄い");
-assert(neck_d <= bar_w, "neck_d は bar_w 以下にする（一体で逆さに刷るとき首が横棒からはみ出す）");
-assert(grip_len >= 0, "handle_len が短すぎる（flare_len を短くする）");
+assert(socket_depth + socket_r + 2 <= grip_len, "握りの穴が先端に近すぎる（peg_len を短くする）");
 
 // 頂点 apex_z・半径 R の球面の、半径 r での高さ
 function dome_z(r, apex_z, R) = apex_z + R - sqrt(R * R - r * r);
@@ -251,36 +241,6 @@ module bar_2d(c = 0) {
     }
 }
 
-// 首から握りへの太さ。t = 0（キャップの下面）〜 1（握り）で、両端の傾きが 0 になる余弦の曲線
-function flare_r(t) = neck_d / 2 + (grip_d - neck_d) / 2 * (1 - cos(180 * t)) / 2;
-
-// 横棒から下の回転断面 [半径, 高さ]：首 → なだらかに太くなる部分 → 握り → 先端の半球
-function handle_profile(n = 32) = concat(
-    [[0, -bar_h + 0.01], [neck_d / 2, -bar_h + 0.01]],
-    [for (i = [0 : n]) let (t = i / n) [flare_r(t), -handle_floor - flare_len * t]],
-    [for (i = [0 : n]) let (a = 90 * i / n) [grip_d / 2 * cos(a), tip_c_z - grip_d / 2 * sin(a)]]);
-
-// 使用時の向き。z=0 が横棒の上面（＝取っ手付きキャップの底の上面）
-module handle() {
-    union() {
-        translate([0, 0, -bar_h]) linear_extrude(bar_h) bar_2d();   // 横棒
-        rotate_extrude() polygon(handle_profile());                  // 首・握り・先端
-    }
-}
-
-// 横棒の長さ方向を含む面（y=0）で縦に 2 つに割った片方。side = 1 で y ≥ 0
-module handle_half(side) {
-    difference() {
-        intersection() {
-            handle();
-            translate([-50, side > 0 ? 0 : -100, -150]) cube([100, 100, 200]);
-        }
-        for (p = handle_pins) translate([p[0], 0, p[1]]) rotate([90, 0, 0])
-            cylinder(d = pin_d + 2 * pin_clr, h = 2 * pin_depth, center = true, $fn = 24);
-    }
-}
-
-// ---------- 差し込み式の取っ手 ----------
 // 対辺 a の八角形。辺が x・y 軸に平行（寝かせて刷ると平らな面が下、斜めの面は 45°）
 module octagon(a) rotate(22.5) circle(r = a / 2 / cos(22.5), $fn = 8);
 
@@ -292,28 +252,25 @@ module anchor() {
             translate([0, 0, peg_tip_z + 1]) linear_extrude(peg_len - 1 + 0.01) octagon(bar_w);
             translate([0, 0, peg_tip_z]) linear_extrude(1, scale = bar_w / (bar_w - 2)) octagon(bar_w - 2);  // 先端の面取り
         }
-        translate([0, 0, peg_pin_z]) rotate([90, 0, 0])
-            cylinder(d = pin_d + 2 * pin_clr, h = bar_w + 2, center = true, $fn = 24);
+        // 空気と余った接着剤の逃げ溝（寝かせて刷るとき上を向く面に、突起の全長にわたって）
+        translate([-0.75, bar_w / 2 - 0.6, peg_tip_z - 0.01]) cube([1.5, 1, grip_top_z - peg_tip_z + 0.01]);
     }
 }
 
 // 握り：上端 Ø grip_top_d からなだらかに grip_d まで太くなり、先端は半球。中央に八角の穴
-function grip_profile(n = 32) = let (top = grip_top_z2) concat(
-    [[0, top]],
+function grip_profile(n = 32) = concat(
+    [[0, grip_top_z]],
     [for (i = [0 : n]) let (t = i / n)
-        [grip_top_d / 2 + (grip_d - grip_top_d) / 2 * (1 - cos(180 * t)) / 2, top - flare_len * t]],
+        [grip_top_d / 2 + (grip_d - grip_top_d) / 2 * (1 - cos(180 * t)) / 2, grip_top_z - flare_len * t]],
     [for (i = [0 : n]) let (a = 90 * i / n) [grip_d / 2 * cos(a), tip_c_z - grip_d / 2 * sin(a)]]);
 
 module grip() {
-    depth = grip_top_z2 - peg_tip_z + 0.5;   // 穴の深さ（突起の先端の下に 0.5 の逃げ）
     difference() {
         rotate_extrude() polygon(grip_profile());
-        translate([0, 0, grip_top_z2 - depth]) linear_extrude(depth + 0.01) octagon(bar_w + 2 * socket_clr);
+        translate([0, 0, grip_top_z - socket_depth]) linear_extrude(socket_depth + 0.01) octagon(bar_w + 2 * socket_clr);
         // 穴の奥は 45°の屋根（逆さに刷るとき天井がサポートなしで閉じる）
-        translate([0, 0, grip_top_z2 - depth - socket_r]) cylinder(r1 = 0, r2 = socket_r, h = socket_r + 0.01, $fn = 8);
-        translate([0, 0, grip_top_z2 - 0.6]) cylinder(r1 = socket_r - 0.2, r2 = socket_r + 0.6, h = 0.61, $fn = 32);  // 入口の面取り
-        translate([0, 0, peg_pin_z]) rotate([90, 0, 0])
-            cylinder(d = pin_d + 2 * pin_clr, h = grip_d + 2, center = true, $fn = 24);
+        translate([0, 0, grip_top_z - socket_depth - socket_r]) cylinder(r1 = 0, r2 = socket_r, h = socket_r + 0.01, $fn = 8);
+        translate([0, 0, grip_top_z - 0.6]) cylinder(r1 = socket_r - 0.2, r2 = socket_r + 0.6, h = 0.61, $fn = 32);  // 入口の面取り
     }
 }
 
@@ -334,23 +291,16 @@ module airtag_dummy() {
 
 // ---------- 出力 ----------
 // 印刷向き：挟みパーツは合わせ面を下（ねじ山が上）、キャップは底を下、
-// 取っ手は割った面を下にして寝かせる（一体版は横棒を下にした逆さ）
+// アンカーは T の面を下に寝かせ、握りは穴の口を下に立てる
 body_h = lip_h - body_bot_z;
 module print_half(side)
     rotate([side * 90, 0, 0])                                 // 合わせ面（y=0）を z=0 に
         translate([0, 0, -(body_bot_z + lip_h) / 2]) half(side);  // ねじの軸方向の中央を原点に
-module print_handle_half(side)
-    rotate([side * 90, 0, 0])                                   // 割った面（y=0）を z=0 に
-        translate([0, 0, (handle_floor + handle_len) / 2]) handle_half(side);  // 軸方向の中央を原点に
-module print_handle() {                                         // 2 つ割りを左右に並べる
-    translate([-(bar_l / 2 + 3), 0, 0]) print_handle_half(1);
-    translate([bar_l / 2 + 3, 0, 0]) print_handle_half(-1);
-}
-module print_handle_upright() rotate([180, 0, 0]) handle();    // 一体版。横棒の上面を z=0 に
-module print_anchor() translate([0, 0, bar_w / 2]) rotate([90, 0, 0]) anchor();   // 寝かせる（T の面を下）
-module print_grip() rotate([180, 0, 0]) translate([0, 0, -grip_top_z2]) grip();   // 穴の口を下に立てる
+module print_anchor()                                         // T の面（y=0）を下に寝かせる
+    translate([0, -(bar_h + peg_len) / 2, bar_w / 2]) rotate([90, 0, 0]) anchor();
+module print_grip() rotate([180, 0, 0]) translate([0, 0, -grip_top_z]) grip();   // 穴の口を下に立てる
 
-echo(str("取っ手：キャップの下に ", handle_len, " mm（なだらかに太くなる部分 ", flare_len, " mm、握りの円柱部分 ", grip_len,
+echo(str("取っ手：握りの全長 ", grip_len, " mm（キャップの下面から先端まで ", grip_gap + grip_len,
          " mm）、取っ手付きキャップの高さ ", handle_floor + cap_inner_h, " mm"));
 
 if (part == "assembly") {
@@ -360,7 +310,8 @@ if (part == "assembly") {
     color("SlateBlue", 0.85) translate([0, -4, 0]) half(-1);
     if (use_handle) {
         color("MediumSeaGreen") translate([0, 0, body_bot_z - handle_floor - 12]) cap(handle_floor, true);
-        color("Peru") translate([0, 0, body_bot_z - 12]) handle();
+        color("Orange") translate([0, 0, body_bot_z - 12]) anchor();
+        color("Peru") translate([0, 0, body_bot_z - 12]) grip();
     } else {
         color("MediumSeaGreen") translate([0, 0, body_bot_z - cap_floor - 12]) cap();
     }
@@ -372,10 +323,6 @@ if (part == "assembly") {
     cap();
 } else if (part == "handle_cap") {
     cap(handle_floor, true);
-} else if (part == "handle") {
-    print_handle();
-} else if (part == "handle_upright") {
-    print_handle_upright();
 } else if (part == "anchor") {
     print_anchor();
 } else if (part == "grip") {
@@ -385,7 +332,8 @@ if (part == "assembly") {
     translate([0, -body_h / 2 - 3, 0]) print_half(-1);
     if (use_handle) {
         translate([cap_od + 8, 0, 0]) cap(handle_floor, true);
-        translate([1.5 * cap_od + 16 + bar_l + 3, 0, 0]) print_handle();
+        translate([1.5 * cap_od + 16 + bar_l / 2, 0, 0]) print_anchor();
+        translate([1.5 * cap_od + 24 + bar_l + grip_d / 2, 0, 0]) print_grip();
     } else {
         translate([cap_od + 8, 0, 0]) cap();
     }
