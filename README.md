@@ -7,6 +7,16 @@ AMVEL の超軽量折りたたみ傘 [pentagon LARGE](https://www.umbrella-store
 > [!NOTE]
 > AMVEL 社とは関係のない非公式の自作パーツです。寸法は手元の 1 本を実測した値で、ロットや他モデル（pentagon72 / pentagon67 など）では合わない可能性があります。
 
+## 外観
+
+傘を差している向き（上が生地側、取っ手が下）で並べています。灰色は傘の持ち手（円盤とシャフト）、銀色は AirTag で、どちらも位置を示すためのダミーです。
+
+| パーツ | 組み上がり | 組み立ての流れ |
+| :---: | :---: | :---: |
+| <img src="images/parts.png" alt="パーツを上から順に並べた分解図" width="214"> | <img src="images/assembled.png" alt="組み上がった状態" width="233"> | <img src="images/assembly.gif" alt="パーツが組み上がるアニメーション" width="300"> |
+
+パーツは上から、挟みパーツ A / B、AirTag、取っ手のアンカー、取っ手付きキャップ、取っ手の握りの順です。動画では、挟みパーツで円盤を挟み、AirTag を入れ、キャップにアンカーと握りを付けてから、本体にねじ込みます（[MP4 版](images/assembly.mp4)）。
+
 ## 構造
 
 使用時の向き（上が生地側）で、上から次の順に重なります。
@@ -45,6 +55,7 @@ AMVEL の超軽量折りたたみ傘 [pentagon LARGE](https://www.umbrella-store
 | `handle_cap.stl` | 取っ手付きキャップ（底 5mm、横棒の溝つき。印刷向きに配置済み） |
 | `anchor.stl` | 取っ手のアンカー（試作。T 字の面を下に寝かせた印刷向きに配置済み） |
 | `grip.stl` | 取っ手の握り（試作。網目。上端の面を下にした印刷向きに配置済み） |
+| `images/` | README の画像と組み立ての動画（GIF / MP4） |
 
 ## 実測値（モデルの基準寸法）
 
