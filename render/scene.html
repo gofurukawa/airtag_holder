@@ -1,0 +1,103 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#fff}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+// build/models の STL（使用時の向き）を読み込み、window.setPose(pose) で部品とカメラを置いて描く
+import * as THREE from 'three';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { mergeVertices, toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
+
+const q = new URLSearchParams(location.search);
+const W = +q.get('w') || 1200, H = +q.get('h') || 1200;
+const dims = await (await fetch('build/dims.json')).json();
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(1);
+renderer.localClippingEnabled = true;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.setClearColor(0xffffff, 1);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const key = new THREE.DirectionalLight(0xffffff, 1.6); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.5); scene.add(fill);
+const camera = new THREE.PerspectiveCamera(22, W / H, 1, 5000);
+camera.up.set(0, 0, 1);
+
+const root = new THREE.Group();   // spin でまとめて回す
+scene.add(root);
+const parts = {};
+
+// 色は .scad の assembly に合わせる
+const SPEC = {
+  umbrella:   { color: 0x5b5f66, rough: 0.55, metal: 0.1, clipZ: 22 },   // シャフトは z=22 で切る
+  half_a:     { color: 0x9370db, rough: 0.45 },
+  half_b:     { color: 0x6a5acd, rough: 0.45 },
+  handle_cap: { color: 0x3cb371, rough: 0.45 },
+  anchor:     { color: 0xf39c12, rough: 0.45 },
+  grip:       { color: 0xcd853f, rough: 0.5 },
+};
+
+async function loadPart(name) {
+  let g = await new STLLoader().loadAsync(`build/models/${name}.stl`);
+  g.deleteAttribute('normal');
+  g = toCreasedNormals(mergeVertices(g, 1e-4), THREE.MathUtils.degToRad(35));   // 曲面はなめらかに、角は立てる
+  const s = SPEC[name];
+  const mat = new THREE.MeshStandardMaterial({
+    color: s.color, roughness: s.rough, metalness: s.metal || 0, side: THREE.DoubleSide,
+    clippingPlanes: s.clipZ ? [new THREE.Plane(new THREE.Vector3(0, 0, -1), s.clipZ)] : null });
+  const grp = new THREE.Group();
+  grp.add(new THREE.Mesh(g, mat));
+  root.add(grp);
+  parts[name] = grp;
+}
+
+// AirTag のダミー：下が白い樹脂、上がステンレス。下面の中央が z=0
+function makeAirTag() {
+  const R = dims.airtag_d / 2, h = dims.airtag_h, rc = 2.6, seam = h * 0.575;
+  const white = [], steel = [];
+  for (let i = 0; i <= 12; i++) { const r = (R - rc) * i / 12; white.push([r, 0.5 * (r / (R - rc)) ** 2]); }
+  for (let i = 1; i <= 16; i++) { const a = i / 16 * Math.PI / 2; white.push([R - rc + rc * Math.sin(a), 0.5 + rc - rc * Math.cos(a)]); }
+  white.push([R, seam]);
+  steel.push([R, seam]);
+  for (let i = 0; i <= 16; i++) { const a = i / 16 * Math.PI / 2; steel.push([R - rc + rc * Math.cos(a), seam + (h - 0.6 - seam) * Math.sin(a)]); }
+  for (let i = 1; i <= 12; i++) { const r = (R - rc) * (1 - i / 12); steel.push([r, h - 0.6 + 0.6 * (1 - (r / (R - rc)) ** 2)]); }
+  const grp = new THREE.Group();
+  for (const [pts, mat] of [
+    [white, new THREE.MeshStandardMaterial({ color: 0xf4f4f2, roughness: 0.3, side: THREE.DoubleSide })],
+    [steel, new THREE.MeshStandardMaterial({ color: 0xdfe1e4, roughness: 0.2, metalness: 1.0, side: THREE.DoubleSide })]]) {
+    const mesh = new THREE.Mesh(new THREE.LatheGeometry(pts.map(([r, z]) => new THREE.Vector2(r, z)), 96), mat);
+    mesh.rotation.x = Math.PI / 2;   // Lathe の軸（Y）を Z に
+    grp.add(mesh);
+  }
+  root.add(grp);
+  parts.airtag = grp;
+}
+
+await Promise.all(Object.keys(SPEC).map(loadPart));
+makeAirTag();
+
+const rad = THREE.MathUtils.degToRad;
+window.setPose = (pose) => {
+  for (const [k, v] of Object.entries(pose.parts)) {
+    parts[k].position.set(v.x || 0, v.y || 0, v.z || 0);
+    parts[k].rotation.set(0, 0, rad(v.rz || 0));
+  }
+  root.rotation.z = rad(pose.spin || 0);
+  const c = pose.camera, az = rad(c.az), el = rad(c.el);
+  camera.fov = c.fov;
+  camera.position.set(c.dist * Math.cos(el) * Math.cos(az), c.dist * Math.cos(el) * Math.sin(az), c.tz + c.dist * Math.sin(el));
+  camera.lookAt(0, 0, c.tz);
+  camera.updateProjectionMatrix();
+  const toCam = new THREE.Matrix4().makeRotationZ(az);   // ライトはカメラから見て同じ向きに
+  key.position.set(60, -80, 140).applyMatrix4(toCam);
+  fill.position.set(-100, 60, 20).applyMatrix4(toCam);
+  renderer.render(scene, camera);
+};
+window.ready = true;
+</script></body></html>
