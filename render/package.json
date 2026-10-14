@@ -1,0 +1,12 @@
+{
+  "name": "airtag-holder-render",
+  "private": true,
+  "description": "README の画像と組み立ての動画を STL から作る",
+  "scripts": {
+    "render": "./render.sh"
+  },
+  "dependencies": {
+    "playwright-core": "1.56.1",
+    "three": "0.169.0"
+  }
+}

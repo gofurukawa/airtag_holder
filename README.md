@@ -13,9 +13,9 @@ AMVEL の超軽量折りたたみ傘 [pentagon LARGE](https://www.umbrella-store
 
 | パーツ | 組み上がり | 組み立ての流れ |
 | :---: | :---: | :---: |
-| <img src="images/parts.png" alt="パーツを上から順に並べた分解図" width="214"> | <img src="images/assembled.png" alt="組み上がった状態" width="233"> | <img src="images/assembly.gif" alt="パーツが組み上がるアニメーション" width="300"> |
+| <img src="render/images/parts.png" alt="パーツを上から順に並べた分解図" width="214"> | <img src="render/images/assembled.png" alt="組み上がった状態" width="233"> | <img src="render/images/assembly.gif" alt="パーツが組み上がるアニメーション" width="300"> |
 
-パーツは上から、挟みパーツ A / B、AirTag、取っ手のアンカー、取っ手付きキャップ、取っ手の握りの順です。動画では、挟みパーツで円盤を挟み、AirTag を入れ、キャップにアンカーと握りを付けてから、本体にねじ込みます（[MP4 版](images/assembly.mp4)）。
+パーツは上から、挟みパーツ A / B、AirTag、取っ手のアンカー、取っ手付きキャップ、取っ手の握りの順です。動画では、挟みパーツで円盤を挟み、AirTag を入れ、キャップにアンカーと握りを付けてから、本体にねじ込みます（[MP4 版](render/images/assembly.mp4)）。画像と動画は `render/` のスクリプトで STL から作っています。
 
 ## 構造
 
@@ -55,7 +55,7 @@ AMVEL の超軽量折りたたみ傘 [pentagon LARGE](https://www.umbrella-store
 | `handle_cap.stl` | 取っ手付きキャップ（底 5mm、横棒の溝つき。印刷向きに配置済み） |
 | `anchor.stl` | 取っ手のアンカー（試作。T 字の面を下に寝かせた印刷向きに配置済み） |
 | `grip.stl` | 取っ手の握り（試作。網目。上端の面を下にした印刷向きに配置済み） |
-| `images/` | README の画像と組み立ての動画（GIF / MP4） |
+| `render/` | README の画像と組み立ての動画、およびそれを作るスクリプト（[説明](render/README.md)） |
 
 ## 実測値（モデルの基準寸法）
 
