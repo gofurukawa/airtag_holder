@@ -43,11 +43,14 @@ def main():
     d = json.load(open(dims_path))
     name = src.rsplit('/', 1)[-1][:-4]
     p = read_stl(src)
-    if name in ('half_a', 'half_b'):
-        # print_half：rotate([side * 90, 0, 0]) translate([0, 0, -(body_bot_z + lip_h) / 2])
+    if name in ('half_a', 'half_b') and d['half_on_side']:
+        # print_half（横倒し）：rotate([side * 90, 0, 0]) translate([0, 0, -(body_bot_z + lip_h) / 2])
         side = 1 if name == 'half_a' else -1
         p = p @ rot_x(-side * 90).T
         p[:, 2] += (d['body_bot_z'] + d['lip_h']) / 2
+    elif name in ('half_a', 'half_b'):
+        # print_half（縦）：translate([0, 0, -body_bot_z])
+        p[:, 2] += d['body_bot_z']
     elif name == 'anchor':
         # print_anchor：translate([0, -(bar_h + peg_len) / 2, bar_w / 2]) rotate([90, 0, 0])
         p = (p - [0, -(d['bar_h'] + d['peg_len']) / 2, d['bar_w'] / 2]) @ rot_x(-90).T

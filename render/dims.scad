@@ -7,6 +7,7 @@ echo(str("DIMS{",
     ",\"bar_h\":", bar_h, ",\"bar_w\":", bar_w, ",\"peg_len\":", peg_len,
     ",\"grip_top_z\":", grip_top_z, ",\"handle_floor\":", handle_floor,
     ",\"cap_inner_h\":", cap_inner_h, ",\"thread_pitch\":", thread_pitch,
-    ",\"airtag_d\":", airtag_d, ",\"airtag_h\":", airtag_h, "}"));
+    ",\"airtag_d\":", airtag_d, ",\"airtag_h\":", airtag_h,
+    ",\"half_on_side\":", half_on_side, "}"));
 
 umbrella_dummy();
