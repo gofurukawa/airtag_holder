@@ -109,7 +109,7 @@ grip_top_z     = -handle_floor;               // 握りの上端（キャップ�
 tip_z          = grip_top_z - grip_len;       // 握りの先端
 tip_c_z        = tip_z + grip_d / 2;          // 先端の半球の中心
 socket_r       = (bar_w / 2 + socket_clr) / cos(22.5);   // 握りの穴（八角）の外接半径
-socket_depth   = grip_top_z - peg_tip_z + 0.5;           // 握りの穴の深さ（突起の先端の下に 0.5 の逃げ）
+socket_depth   = grip_top_z - peg_tip_z + 1.0;           // 握りの穴の深さ（突起の先端の下に 1.0 の逃げ。奥にたまる接着剤やたれの分）
 
 assert(grip_len >= flare_len + grip_d / 2, "grip_len が短すぎる（flare_len を短くする）");
 assert(grip_top >= window_d + 4, "握りの上端が細すぎて、キャップの下面に突き当たる幅が足りない");
