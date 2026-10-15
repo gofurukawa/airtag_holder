@@ -5,7 +5,7 @@
 // =============================================================
 
 /* [出力する部品] */
-part = "assembly"; // [assembly, half_a, half_b, cap, handle_cap, anchor, grip, print_all]
+part = "assembly"; // [assembly, half_a, half_b, cap, handle_cap, anchor, grip, gauge, print_all]
 use_handle = true;  // assembly と print_all で、取っ手付きのキャップと取っ手（アンカー＋握り）を使う
 
 /* [傘の実測値] */
@@ -19,6 +19,9 @@ shaft_d       = 7.7;   // E シャフト径（表示用）
 /* [AirTag] */
 airtag_d = 31.9;
 airtag_h = 8.0;
+// AirTag の縁の丸み（断面の角の半径）。ポケットの上下の角をこの丸みで埋め、ねじの谷との間の壁を厚くする。
+// 実物の丸みは白い面の側で約 2.6、ステンレスの側はそれより大きいので、2.0 は小さめの見積り。0 で円柱のポケット
+airtag_edge_r = 2.0;
 
 /* [クリアランス] */
 clr          = 0.2;   // 円盤まわりの片側すき間（0.2 で縁も中央もぴったり固定できた実績あり）
@@ -33,7 +36,7 @@ upper_wall   = 1.6;   // 円盤まわりの肉厚
 partition_t  = 1.0;   // 円盤と AirTag の仕切り（中央の厚み）
 
 /* [ねじ] */
-thread_major_d = 38;   // ポケットとの間の肉厚は (thread_major_d - 2 × thread_depth - ポケット径) / 2 = 1.4
+thread_major_d = 37;   // ポケットとねじの谷の間の肉厚は (thread_major_d - 2 × thread_depth - ポケット径) / 2 = 0.9。ポケットの角を丸めたので、この薄さになるのは高さ 3.8mm の帯だけ
 thread_pitch   = 3;
 thread_depth   = 1.4;
 crest_w        = 1.0;  // 山頂の幅
@@ -92,6 +95,7 @@ cavity_bot_z   = -(disc_center_h + clr);   // 空洞の底（球面の頂点）
 ledge_z        = -(disc_edge_h + clr);     // 球面が縁の平らな部分に移る高さ（自動の球面では縁の角に一致）
 pocket_d       = airtag_d + pocket_clr_d;
 pocket_h       = airtag_h + pocket_clr_h;
+pocket_rc      = airtag_edge_r > 0 ? airtag_edge_r + pocket_clr_d / 2 : 0;   // ポケットの角の丸み（すき間込み）
 pocket_top_z   = cavity_bot_z - partition_t;
 body_bot_z     = pocket_top_z - pocket_h;
 upper_od       = 2 * cavity_r + 2 * upper_wall;
@@ -115,6 +119,8 @@ assert(grip_len >= flare_len + grip_d / 2, "grip_len が短すぎる（flare_len
 assert(grip_top >= window_d + 4, "握りの上端が細すぎて、キャップの下面に突き当たる幅が足りない");
 assert(grip_top <= cap_od + 0.01, "握りの上端がキャップの外径より太い");
 assert(socket_depth + socket_r + 2 <= grip_len, "握りの穴が先端に近すぎる（peg_len を短くする）");
+assert(!half_on_side || (minor_d - pocket_d) / 2 - bridge_relief >= 0.6,
+       "横倒しで刷ると、天井の逃げの分だけポケットとねじの谷の間の壁が薄くなりすぎる（thread_major_d を 38 以上にする）");
 
 // 頂点 apex_z・半径 R の球面の、半径 r での高さ
 function dome_z(r, apex_z, R) = apex_z + R - sqrt(R * R - r * r);
@@ -196,6 +202,22 @@ module relief_2d(r) {
 }
 
 // ---------- 本体（分割前） ----------
+// AirTag のポケット。断面は角を pocket_rc で丸めた長方形。下の開口は AirTag より狭いので、
+// AirTag は左右のパーツで挟んで閉じ込める（キャップを外して左右に開けば取り出せる）
+module pocket_profile() {
+    rc = pocket_rc;
+    if (rc > 0) {
+        hull() {
+            translate([0, body_bot_z]) square([0.01, pocket_h]);
+            for (z = [body_bot_z + rc, body_bot_z + pocket_h - rc]) translate([pocket_d / 2 - rc, z]) circle(r = rc);
+        }
+        translate([0, body_bot_z - 1]) square([pocket_d / 2 - rc, rc + 1]);   // 下の開口
+    } else {
+        translate([0, body_bot_z - 1]) square([pocket_d / 2, pocket_h + 1]);
+    }
+}
+module pocket_void() rotate_extrude() pocket_profile();
+
 module disc_cavity() {
     rotate_extrude() disc_profile(cavity_bot_z, dome_R_eff, ledge_z, cavity_r, clr);
 }
@@ -212,7 +234,7 @@ module body() {
         }
         translate([0, 0, -1]) cylinder(d = recess_d, h = lip_h + 2);   // 爪の開口
         disc_cavity();                                                  // 円盤
-        translate([0, 0, body_bot_z - 1]) cylinder(d = pocket_d, h = pocket_h + 1); // AirTag
+        pocket_void();                                                  // AirTag
         if (half_on_side && bridge_relief > 0) {                                        // 横倒し印刷用の逃げ
             translate([0, 0, body_bot_z - 1]) linear_extrude(pocket_h + 1) relief_2d(pocket_d / 2);
             translate([0, 0, ledge_z]) linear_extrude(clr - ledge_z) relief_2d(cavity_r);
@@ -351,7 +373,11 @@ module umbrella_dummy() {
 }
 
 module airtag_dummy() {
-    color("WhiteSmoke") translate([0, 0, body_bot_z + 0.15]) cylinder(d = airtag_d, h = airtag_h);
+    rc = max(airtag_edge_r, 0.01);
+    color("WhiteSmoke") translate([0, 0, body_bot_z + 0.15]) rotate_extrude() hull() {
+        square([0.01, airtag_h]);
+        for (z = [rc, airtag_h - rc]) translate([airtag_d / 2 - rc, z]) circle(r = rc);
+    }
 }
 
 // ---------- 出力 ----------
@@ -370,7 +396,7 @@ module grip_part() if (mesh) grip_mesh(); else grip();
 module print_grip() rotate([180, 0, 0]) translate([0, 0, -grip_top_z]) grip_part();   // 上端の面を下に立てる
 
 echo(str("取っ手：握りの全長 ", grip_len, " mm、上端 Ø", grip_top, "、取っ手付きキャップの高さ ", handle_floor + cap_inner_h, " mm"));
-echo(str("外径：キャップ Ø", cap_od, "、ねじ Ø", thread_major_d, "、円盤まわり Ø", upper_od, "。ポケットとねじの谷の間の肉厚 ", (minor_d - pocket_d) / 2, " mm"));
+echo(str("外径：キャップ Ø", cap_od, "、ねじ Ø", thread_major_d, "、円盤まわり Ø", upper_od, "。ポケットとねじの谷の間の肉厚 ", (minor_d - pocket_d) / 2, " mm（高さ ", pocket_h - 2 * pocket_rc, " mm の帯）、ポケットの下の開口 Ø", pocket_d - 2 * pocket_rc));
 
 if (part == "assembly") {
     umbrella_dummy();
@@ -396,6 +422,12 @@ if (part == "assembly") {
     print_anchor();
 } else if (part == "grip") {
     print_grip();
+} else if (part == "gauge") {
+    // 試し刷り用：挟みパーツのねじの部分だけ（AirTag のポケットとおねじ）。AirTag の収まりとキャップのねじを確かめる
+    for (side = [1, -1]) translate([0, side * 3, 0]) intersection() {
+        translate([0, 0, -body_bot_z]) half(side);   // 向きは half_on_side によらず、ポケットの開口を下に
+        translate([-50, -50, 0]) cube([100, 100, thread_top_z - body_bot_z]);
+    }
 } else if (part == "print_all") {
     gap = half_on_side ? body_h / 2 + 3 : 3;
     translate([0, gap, 0]) print_half(1);

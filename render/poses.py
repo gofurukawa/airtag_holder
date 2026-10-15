@@ -76,7 +76,7 @@ ALL = dict(halves=1, airtag=1, anchor=1, grip=1, lift=1, screw=1, cam=1)
 stills = [pose(name='parts'), pose(name='assembled', **ALL)]   # 分解図は動画の最初のフレームと同じ
 
 # タイムライン（秒）：(段, 開始, 終了)
-TL = [('halves', 0.8, 2.0), ('airtag', 2.4, 3.4), ('anchor', 3.8, 4.8), ('grip', 5.0, 5.8),
+TL = [('airtag', 0.8, 1.8), ('halves', 2.2, 3.4), ('anchor', 3.8, 4.8), ('grip', 5.0, 5.8),
       ('lift', 6.0, 7.0), ('screw', 7.2, 9.4), ('cam', 9.8, 10.8), ('spin', 10.8, 14.8)]
 END = 15.4
 anim = []
